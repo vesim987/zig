@@ -1810,8 +1810,8 @@ pub const Stage2ErrorMsg = extern struct {
 
 pub const LoadFromCommandLine = ZigClangLoadFromCommandLine;
 extern fn ZigClangLoadFromCommandLine(
-    args_begin: [*]?[*]const u8,
-    args_end: [*]?[*]const u8,
+    args_begin: [*]const ?[*]const u8,
+    args_end: [*]const ?[*]const u8,
     errors_ptr: *[*]Stage2ErrorMsg,
     errors_len: *usize,
     resources_path: [*:0]const u8,

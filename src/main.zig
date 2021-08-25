@@ -2528,7 +2528,12 @@ fn cmdTranslateC(comp: *Compilation, arena: *Allocator, enable_cache: bool) !voi
             new_argv[argv.items.len + i] = try arena.dupeZ(u8, arg);
         }
 
+        for(new_argv)|arg, i|{ 
+            try std.io.getStdErr().writer().print("argv[{}] = {s}\n", .{i, arg});
+        }
+
         const c_headers_dir_path = try comp.zig_lib_directory.join(arena, &[_][]const u8{"include"});
+        try std.io.getStdErr().writer().print("header_dir_path: {s}", .{c_headers_dir_path});
         const c_headers_dir_path_z = try arena.dupeZ(u8, c_headers_dir_path);
         var clang_errors: []translate_c.ClangErrMsg = &[0]translate_c.ClangErrMsg{};
         var tree = translate_c.translate(

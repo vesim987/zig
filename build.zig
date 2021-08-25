@@ -100,6 +100,12 @@ pub fn build(b: *Builder) !void {
 
     const main_file = if (is_stage1) "src/stage1.zig" else "src/main.zig";
 
+    var translate_c = b.addExecutable("translate-c", "src/translate_c.zig");
+    translate_c.strip = strip;
+    translate_c.install();
+    translate_c.setBuildMode(mode);
+    translate_c.setTarget(target);
+
     var exe = b.addExecutable("zig", main_file);
     exe.strip = strip;
     exe.install();
@@ -155,15 +161,18 @@ pub fn build(b: *Builder) !void {
             }
 
             try addCmakeCfgOptionsToExe(b, cfg, exe);
+            try addCmakeCfgOptionsToExe(b, cfg, translate_c);
             try addCmakeCfgOptionsToExe(b, cfg, test_stage2);
         } else {
             // Here we are -Denable-llvm but no cmake integration.
             try addStaticLlvmOptionsToExe(exe);
+            try addStaticLlvmOptionsToExe(translate_c);
             try addStaticLlvmOptionsToExe(test_stage2);
         }
     }
     if (link_libc) {
         exe.linkLibC();
+        translate_c.linkLibC();
         test_stage2.linkLibC();
     }
 
@@ -379,6 +388,10 @@ pub fn build(b: *Builder) !void {
     test_step.dependOn(toolchain_step);
     test_step.dependOn(std_step);
     test_step.dependOn(docs_step);
+
+    const translate_c_step = b.step("translate-c", "Build and run simple binary with only translate-c");
+    var translate_c_run = translate_c.run();
+    translate_c_step.dependOn(&translate_c_run.step);
 }
 
 const exe_cflags = [_][]const u8{

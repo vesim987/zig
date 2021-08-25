@@ -354,8 +354,8 @@ pub const Context = struct {
 
 pub fn translate(
     gpa: *mem.Allocator,
-    args_begin: [*]?[*]const u8,
-    args_end: [*]?[*]const u8,
+    args_begin: [*]const ?[*]const u8,
+    args_end: [*]const ?[*]const u8,
     errors: *[]ClangErrMsg,
     resources_path: [*:0]const u8,
 ) !std.zig.ast.Tree {
@@ -6502,4 +6502,51 @@ fn addMacros(c: *Context) !void {
             try addTopLevelDecl(c, entry.key_ptr.*, entry.value_ptr.*);
         }
     }
+}
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = &gpa.allocator;
+
+    var clang_errors: []ClangErrMsg = &[0]ClangErrMsg{};
+
+    const clang_args: [*]const [*]const u8 = &[_][*]const u8{
+        "",
+        "-x",
+        "c",
+        "-Xclang",
+        "-detailed-preprocessing-record",
+        "test.c",
+    };
+
+    const c_headers_dir_path_z: [*:0]const u8 = "/home/vesim/pro/zig/zig-out/lib/zig/include";
+
+    var tree = translate(
+        allocator,
+            clang_args,
+            clang_args + 6,
+            &clang_errors,
+            c_headers_dir_path_z,
+    ) catch |err| switch (err) {
+    error.OutOfMemory => return error.OutOfMemory,
+        error.ASTUnitFailure => @panic("clang API returned errors but due to a clang bug, it is not exposing the errors for zig to see. For more details: https://github.com/ziglang/zig/issues/4455"),
+        error.SemanticAnalyzeFail => {
+            for (clang_errors) |clang_err| {
+                std.debug.print("{s}:{d}:{d}: {s}\n", .{
+                    if (clang_err.filename_ptr) |p| p[0..clang_err.filename_len] else "(no file)",
+                    clang_err.line + 1,
+                    clang_err.column + 1,
+                    clang_err.msg_ptr[0..clang_err.msg_len],
+                });
+            }
+            return error.SemanticAnalyzeFail;
+        },
+    };
+
+    const formatted = try tree.render(allocator);
+    defer allocator.free(formatted);
+    
+    try std.io.getStdOut().writer().writeAll(formatted);
+
+    defer tree.deinit(allocator);
 }
