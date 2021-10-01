@@ -670,6 +670,11 @@ const llvm_targets = [_]LlvmTarget{
         .td_name = "MSP430.td",
     },
     .{
+        .zig_name = "m68k",
+        .llvm_name = "M68k",
+        .td_name = "M68k.td",
+    },
+    .{
         .zig_name = "mips",
         .llvm_name = "Mips",
         .td_name = "Mips.td",
